@@ -18,19 +18,12 @@ bot = telebot.TeleBot(TOKEN)
 
 # class photo
 
-
-# class Message(BaseModel):
-#     file_id: str
-#     file_unique_id: str
-#     width: int
-#     height: int
-#     duration: int
-#     # thumb: telebot.types.PhotoSize
-#     file_name: str
-#     mime_type: str
-#     file_size: int
-
-
+#
+# con = sqlite3.connect("tutorial.db")
+# cur = con.cursor()
+# # res = cur.execute("DROP DATABASE photos;")
+# cur.execute("CREATE TABLE photos(file_name  , date, file_id, user_id)")
+# print(cur.fetchall())
 @bot.message_handler(commands=['hello'])
 def start(message):
     print("called start")
@@ -58,12 +51,8 @@ def upload(message):
     file_name = f"img{upload.count}.jpg"
     print("file name ", file_name)
     print("message ", message, end='\n')
-    # try:
-    #     msg = Message.parse_raw(message)
-    # except ValidationError as e:
-    #     print("error ", e.json())
 
-    # print ('message.photo =', message.photo)
+
     userID = message.from_user.id
     fileID = message.photo[-1].file_id
     # print('fileID =', fileID)
@@ -78,20 +67,20 @@ def upload(message):
     # if res.fetchone() is not None:
     #     print("existing table is ", res.fetchone())
     # else:
-    # cur.execute("CREATE TABLE photos(file_name, date, file_id, user_id)")
+        # cur.execute("CREATE TABLE photos(file_name, date, file_id, user_id)")
     print("con ", con)
     print("cur ", cur)
     res = cur.execute("SELECT * FROM photos")
     print("all content from table are ", res.fetchall())
     date_now = date.today()
-    with open(file_name, 'wb') as new_file:
-        new_file.write(downloaded_file)
-        if "/" in file_name:
-            file_name = file_name.split("/")[1]
-        cur.execute("""
-                    INSERT INTO photos VALUES (?, ?, ?, ?);
-                """, (file_name, date_now, fileID, userID))
-        con.commit()
+    # with open(file_name, 'wb') as new_file:
+    #     new_file.write(downloaded_file)
+    #     if "/" in file_name:
+    #         file_name = file_name.split("/")[1]
+    cur.execute("""
+                INSERT INTO photos VALUES (?, ?, ?, ?);
+            """, (file_name, date_now, fileID, userID))
+    con.commit()
 
 
 upload.count = 0
@@ -99,25 +88,40 @@ upload.count = 0
 
 @bot.message_handler(commands=['chooseFile'], content_types=['text'])
 def choose_photo(message):
+    user_id = message.from_user.id
     print("called choose_file")
     directory = '.'
     reply = ""
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        # checking if it is a file
-        if os.path.isfile(f):
-            if "/" in f:
-                f = f.split("/")[1]
-            print(f)
-            reply += f"Файл: {f}\n"
-            btn1 = types.KeyboardButton(f)
-            markup.add(btn1)
-    # print(reply)
-    bot.send_message(message.from_user.id, reply, reply_markup=markup)
 
-    # bot.send_photo(message.from_user.id, "img.jpg")
-    # send_photo(message.from_user.id, "img.png")
+    con = sqlite3.connect("tutorial.db")
+    cur = con.cursor()
+    cur.execute("SELECT name FROM sqlite_master")
+    print("table is ", cur.fetchone())
+    # if res.fetchone() is not None:
+    #     print("existing table is ", res.fetchone())
+    # else:
+    #     cur.execute("CREATE TABLE photos(file_name, date, file_id, user_id)")
+
+    con = sqlite3.connect("tutorial.db")
+    cur = con.cursor()
+    cur.execute(f"SELECT * FROM photos ")
+    print("all db -------\n", cur.fetchall())
+    if (cur.rowcount != 0):
+        cur.execute(f"SELECT * FROM photos where user_id is {user_id}")
+        print("res -------\n", cur.fetchall())
+
+        i = 0
+        for row in cur:
+            print("i " + str(i) + " ", row)
+            i += 1
+            btn1 = types.KeyboardButton(row[0])
+            markup.add(btn1)
+        bot.send_message(message.from_user.id, "choose file from your store", reply_markup=markup)
+    else:
+        bot.send_message(message.from_user.id, "Now your store is empty, please send your photo in the chat")
+
+
 
 
 
