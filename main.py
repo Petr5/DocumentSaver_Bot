@@ -19,10 +19,10 @@ bot = telebot.TeleBot(TOKEN)
 # class photo
 
 #
-# con = sqlite3.connect("tutorial.db")
-# cur = con.cursor()
+gcon = sqlite3.connect("tutorial.db")
+gcur = gcon.cursor()
 # # res = cur.execute("DROP DATABASE photos;")
-# cur.execute("CREATE TABLE photos(file_name  , date, file_id, user_id)")
+# gcur.execute("CREATE TABLE photos(file_name  , date, file_id, user_id)")
 # print(cur.fetchall())
 @bot.message_handler(commands=['hello'])
 def start(message):
@@ -45,9 +45,10 @@ def save(message):
 
 @bot.message_handler(content_types=['document', 'photo', 'audio', 'video', 'voice']) # list relevant content types
 def upload(message):
-    # global count
     upload.count += 1
     print("called upload")
+    con = sqlite3.connect("tutorial.db")
+    cur = con.cursor()
     file_name = f"img{upload.count}.jpg"
     print("file name ", file_name)
     print("message ", message, end='\n')
@@ -58,8 +59,6 @@ def upload(message):
     print('file.file_path =', file_info.file_path)
     downloaded_file = bot.download_file(file_info.file_path)
 
-    con = sqlite3.connect("tutorial.db")
-    cur = con.cursor()
     res = cur.execute("SELECT name FROM sqlite_master")
     print(res.fetchall())
     # if res.fetchone() is not None:
@@ -69,10 +68,7 @@ def upload(message):
     print("con ", con)
     print("cur ", cur)
     date_now = date.today()
-    # with open(file_name, 'wb') as new_file:
-    #     new_file.write(downloaded_file)
-    #     if "/" in file_name:
-    #         file_name = file_name.split("/")[1]
+
     cur.execute("""
                 INSERT INTO photos VALUES (?, ?, ?, ?);
             """, (file_name, date_now, fileID, userID))
@@ -80,15 +76,20 @@ def upload(message):
     print("all content from table after insertion ", cur.fetchall())
     con.commit()
 
-
-upload.count = 0
+gcur.execute("select count(file_name) from photos")
+# print("NUMBER OF ALL QUERIES IS ", cur.fetchall())
+# print("NUMBER OF ALL QUERIES IS ", cur.fetchone()[0])
+CNT_COLUMN_DB = gcur.fetchone()[0]
+upload.count = CNT_COLUMN_DB
 
 
 @bot.message_handler(commands=['chooseFile'], content_types=['text'])
 def choose_photo(message):
+
     user_id = message.from_user.id
     print("user_id is ", user_id)
     print("called choose_file")
+
     directory = '.'
     reply = ""
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
@@ -109,8 +110,6 @@ def choose_photo(message):
     print("rowcount now ", cur.rowcount)
     if (cur.rowcount != 0 ):
         res = cur.execute(f"SELECT * FROM photos where user_id is {user_id}")
-        print("res -------\n", res.fetchall())
-        print("rowcount now ", res.rowcount)
 
         i = 0
         for row in res:
@@ -122,11 +121,7 @@ def choose_photo(message):
         bot.send_message(message.from_user.id, "choose file from your store", reply_markup=markup)
     else:
         bot.send_message(message.from_user.id, "Now your store is empty, please send your photo in the chat")
-    # m = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    # btn = types.KeyboardButton("buy smth")
-    # m.add(btn)
-    # bot.send_message(message.from_user.id, "test", reply_markup=m)
-    # print(m.to_json())
+
 
 
 
@@ -137,18 +132,25 @@ def await_reply(message):
     print(message)
     con = sqlite3.connect("tutorial.db")
     cur = con.cursor()
+    user_id = message.from_user.id
     searched_file = message.text
     print("searched ile is ", searched_file)
-    query = f"SELECT * FROM photos WHERE file_name is " + "'" + searched_file + "';"
-    print("query ", query)
-    res = cur.execute(query)
-    print("res on query ", res.fetchall())
-    print(res.rowcount)
-    if res.rowcount == 0 or res.rowcount == -1:
-        bot.send_message(message.chat.id, "Such file doesn't exist, please read the manual")
+    if "select" in searched_file.lower() or "union" in searched_file.lower() or "where" in searched_file.lower() or "delete" in searched_file.lower() or "sqlite" in searched_file.lower()\
+        or "from" in searched_file.lower() or "insert" in searched_file.lower():
+
+        bot.send_message(message.chat.id, "Do not do things like that any more!!!!")
+        print("HAHAH попался")
     else:
-        bot.send_photo(message.chat.id, res.fetchone()[2])
-    # print(res.fetchall())
+        query = f"SELECT * FROM photos WHERE file_name is '{searched_file}'  and user_id is {user_id};"
+        print("query that have benn doing to database from ", query)
+        res = cur.execute(query)
+
+        result_on_user_query = res.fetchone()
+        print("result_on_user_query ", result_on_user_query)
+        if result_on_user_query is None:
+            bot.send_message(message.chat.id, "Such file doesn't exist, please read the manual")
+        else:
+            bot.send_photo(message.chat.id, result_on_user_query[2])
 
 def send_photo(chat_id, file_name):
     bot.send_photo(chat_id, file_name)
