@@ -52,10 +52,10 @@ def upload(message):
     file_name = f"img{upload.count}.jpg"
     print("file name ", file_name)
     print("message ", message, end='\n')
-    userID = message.from_user.id
-    fileID = message.photo[-1].file_id
-    print('fileID =', fileID)
-    file_info = bot.get_file(fileID)
+    user_id = message.from_user.id
+    file_id = message.photo[-1].file_id
+    print('fileID =', file_id)
+    file_info = bot.get_file(file_id)
     print('file.file_path =', file_info.file_path)
     downloaded_file = bot.download_file(file_info.file_path)
 
@@ -65,16 +65,16 @@ def upload(message):
     #     print("existing table is ", res.fetchone())
     # else:
         # cur.execute("CREATE TABLE photos(file_name, date, file_id, user_id)")
-    print("con ", con)
-    print("cur ", cur)
+    # print("con ", con)
+    # print("cur ", cur)
     date_now = date.today()
-
-    cur.execute("""
-                INSERT INTO photos VALUES (?, ?, ?, ?);
-            """, (file_name, date_now, fileID, userID))
+    query = f"INSERT INTO photos (file_name, date, file_id, user_id) VALUES ('{file_name}', '{date_now}', '{file_id}', {user_id});"
+    print("query which have doing to the database ", query)
+    params = (file_name, date_now, file_id, user_id)
+    cur.execute(query)
     cur.execute("SELECT * FROM photos")
-    print("all content from table after insertion ", cur.fetchall())
     con.commit()
+    print("all content from table after insertion ", cur.fetchall())
 
 gcur.execute("select count(file_name) from photos")
 # print("NUMBER OF ALL QUERIES IS ", cur.fetchall())
